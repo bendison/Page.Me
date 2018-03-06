@@ -52,12 +52,11 @@ void loop()
         if (client.connect(host, 80)) {
             Serial.println("connected]");
             String content = "name=Jane&address=";
-            IPAddress ip = client.localIP();
+            String ip = client.localIP().toString();
             content.concat(ip);
             //content.concat(test);
             Serial.println(content);
-            Serial.println(content);
-            client.println("POST / HTTP/1.1");
+            client.println("POST /add HTTP/1.1");
             String h = host;
             String hostPort = "Host: " + h + ":" + 80;
             client.println(hostPort);

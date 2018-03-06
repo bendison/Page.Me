@@ -16,6 +16,9 @@ ESP8266WiFiMulti WiFiMulti;
 const char* host = "192.168.4.1";
 int param = 0;
 
+String tName = "Jane";
+int joined = 0;
+
 void setup() {
     Serial.begin(9600);
     delay(10);
@@ -50,40 +53,42 @@ void loop()
         
         Serial.printf("\n[Connecting to %s ... ", host);
         if (client.connect(host, 80)) {
-            Serial.println("connected]");
-            String content = "name=Jane&address=";
-            String ip = client.localIP().toString();
-            content.concat(ip);
-            //content.concat(test);
-            Serial.println(content);
-            client.println("POST /add HTTP/1.1");
-            String h = host;
-            String hostPort = "Host: " + h + ":" + 80;
-            client.println(hostPort);
-            client.println("Cache-Control: no-cache");
-            client.println("Content-Type: application/x-www-form-urlencoded");
-            client.print("Content-Length: ");
-            client.println(content.length());
-            client.println();
-            client.println(content);
-        
-            /*Serial.println("[Response:]");
-            while (client.connected())
-            {
-            if (client.available())
-            {
-                String line = client.readStringUntil('\n');
-                int value = atoi(line.c_str()); //value = 45 
-                if (value == 1) {
-                
-                Serial.println("integer found");
+            if (joined == 0) {
+                Serial.println("connected]");
+                String content = "name=Jane&address=";
+                String ip = client.localIP().toString();
+                content.concat(ip);
+                //content.concat(test);
+                Serial.println(content);
+                client.println("POST /add HTTP/1.1");
+                String h = host;
+                String hostPort = "Host: " + h + ":" + 80;
+                client.println(hostPort);
+                client.println("Cache-Control: no-cache");
+                client.println("Content-Type: application/x-www-form-urlencoded");
+                client.print("Content-Length: ");
+                client.println(content.length());
+                client.println();
+                client.println(content);
+
+                Serial.println("[Response:]");
+                while (client.connected()) {
+                    if (client.available()) {
+                        String line = client.readStringUntil('\n');
+                        if (line.compareTo(tName) == 0) {
+                            //Update joined status
+                            joined = 1;
+                            Serial.println("Added to network successfully.");
+                        }
+                    }
                 }
-                Serial.println(line);
+                client.stop();
+                Serial.println("\n[Disconnected]");
             }
-            }*/
-            client.stop();
-            Serial.println("\n[Disconnected]");
-            param = param + 1;
+            else {
+                Serial.println("connected]");                
+                Serial.println("Already exist in this network.");
+            }
         }
         else
         {

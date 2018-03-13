@@ -216,7 +216,6 @@ void sendTeacherResponse() {
                     //Convert to integers to remove garbage characters
                     int a = atoi(line.c_str());
                     int b = atoi(response.c_str());
-                    //if (line.compareTo(response) == 0) {
                     if (a == b) {
                         Serial.println("Response received.");
                         //reset checks for new requests

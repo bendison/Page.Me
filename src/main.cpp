@@ -16,15 +16,17 @@ ESP8266WiFiMulti WiFiMulti;
 const char* host = "192.168.4.1";
 int param = 0;
 
-String tName = "Jane";
+String teacherName = "";
 int joined = 0;
 int request = 0;
 String response = "";
 String nameTest = "";
 
+void setupTeacherName();
 void setupClientConnection();
 void checkContactRequests();
 void sendTeacherResponse();
+void updateTeacherName();
 
 void setup() {
     Serial.begin(9600);
@@ -48,12 +50,14 @@ void setup() {
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 
+    setupTeacherName();
     setupClientConnection();
     delay(500);
 }
 
 void loop()
 {
+    Serial.println(teacherName);
     if (request == 0) {
         checkContactRequests();
     }    
@@ -62,7 +66,7 @@ void loop()
         if (Serial.available() > 0) {
             String message = Serial.readStringUntil('\n');
             //if (message.compareTo(":res123") == 0) {
-            if (message.indexOf(":res") == 0) {
+            if (message.indexOf("res:") == 0) {
                 message.remove(0, 4);
                 response = message;
                 Serial.println("hi there");
@@ -71,11 +75,40 @@ void loop()
                 //send response where we update the name on the server that's getting
                 //requested
             }
+            if (message.indexOf("name:") == 0) {
+                message.remove(0, 5);
+                teacherName = message;
+                Serial.println("Name found");
+                Serial.println(teacherName);
+                updateTeacherName();
+
+            }              
         }
         //Read serial for response, then call method to send response to server, 
         //then set request back to 0 upon delivery confirmation
     }
     delay(5000);
+}
+
+void setupTeacherName() {
+    int nameFound = 0;
+    Serial.println("Looking for teacher name");
+    while(nameFound == 0) {
+        if (Serial.available() > 0) {
+            //String message = Serial.readString();
+            String message = Serial.readStringUntil('\n');
+            //r = request
+            //Serial.println("Message: ");
+            //Serial.println(message);
+            if (message.indexOf("name:") == 0) {
+                message.remove(0, 4);
+                teacherName = message;
+                nameFound = 1;
+                Serial.println("Teachername found: ");
+                Serial.println(teacherName);
+            }    
+        }    
+    }
 }
 
 void setupClientConnection() {
@@ -86,10 +119,12 @@ void setupClientConnection() {
         if (client.connect(host, 80)) {
             if (joined == 0) {
                 Serial.println("connected]");
-                String content = "name=Jane&address=";
+                String content = "name=";
+                content.concat(teacherName);
+                content.concat("&address=");
+                //String content = "name=Jane&address=";
                 String ip = client.localIP().toString();
                 content.concat(ip);
-                //content.concat(test);
                 Serial.println(content);
                 client.println("POST /add HTTP/1.1");
                 String h = host;
@@ -106,7 +141,7 @@ void setupClientConnection() {
                 while (client.connected()) {
                     if (client.available()) {
                         String line = client.readStringUntil('\n');
-                        if (line.compareTo(tName) == 0) {
+                        if (line.compareTo(teacherName) == 0) {
                             Serial.println("Added to network successfully.");
                         }
                         else if (line.compareTo("updated") == 0) {
@@ -158,12 +193,12 @@ void checkContactRequests() {
             if (client.available()) {
                 String line = client.readStringUntil('\n');
                 Serial.println(line);
-                if (line.compareTo(tName) == 0) {
+                if (line.compareTo(teacherName) == 0) {
                     Serial.println("Request for you.");
                     request = 1;
                     nameTest = line;
                     client.stop();                  
-                    Serial.write(":req");  
+                    Serial.write("req:");  
                     //Serial write to arduino, play notifications
                 }      
                 //need other if to check length to see if the teacher "none" so we 
@@ -236,5 +271,48 @@ void sendTeacherResponse() {
             Serial.println("connection failed!]");
             client.stop();
         }
+    }
+}
+
+void updateTeacherName() {
+    WiFiClient client;
+    Serial.printf("\n[Connecting to %s ... ", host);
+    if (client.connect(host, 80)) {
+        Serial.println("connected]");
+        String content = "name=";
+        content.concat(teacherName);
+        content.concat("&address=");
+        //String content = "name=Jane&address=";
+        String ip = client.localIP().toString();
+        content.concat(ip);
+        client.println("POST /update HTTP/1.1");
+        String h = host;
+        String hostPort = "Host: " + h + ":" + 80;
+        client.println(hostPort);
+        client.println("Cache-Control: no-cache");
+        client.println("Content-Type: application/x-www-form-urlencoded");
+        client.print("Content-Length: ");
+        client.println(content.length());
+        client.println();
+        client.println(content);
+
+        Serial.println("[Response:]");
+        while (client.connected()) {
+            if (client.available()) {
+                String line = client.readStringUntil('\n');
+                Serial.println(line);
+                if (line.compareTo(teacherName) == 0) {
+                    Serial.println("Name updated.");
+                    client.stop();            
+                }         
+            }
+        }
+        client.stop();
+        Serial.println("\n[Disconnected]");
+    }
+    else {
+        Serial.println("connection failed!]");
+        //Serial write unable to get requests
+        client.stop();
     }
 }
